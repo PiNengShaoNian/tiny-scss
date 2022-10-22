@@ -17,6 +17,14 @@ export const lexer = (input: string): Token[] => {
 
     return input.slice(start, idx)
   }
+  const isDigit = (c: string): boolean => c >= '0' && c < '9'
+  const readValue = (): string => {
+    const start = idx
+
+    while (idx < n && (isDigit(input[idx]) || isLetter(input[idx]))) ++idx
+
+    return input.slice(start, idx)
+  }
 
   while (idx < n) {
     switch (input[idx]) {
@@ -38,12 +46,23 @@ export const lexer = (input: string): Token[] => {
         tokens.push(new Token(SyntaxType.RBraceToken, '}'))
         ++idx
         break
+      case ':':
+        tokens.push(new Token(SyntaxType.ColonToken, ':'))
+        ++idx
+        break
+      case ';':
+        tokens.push(new Token(SyntaxType.SemicolonToken, ';'))
+        ++idx
+        break
       default: {
         if (isLetter(input[idx])) {
           const name = readName()
           tokens.push(new Token(SyntaxType.NameToken, name))
+        } else if (isDigit(input[idx])) {
+          const value = readValue()
+          tokens.push(new Token(SyntaxType.ValueToken, value))
         } else {
-          throw new Error(`Lexer: bad character ${input[idx]} at ${idx}`)
+          throw new Error(`Lexer: bad character '${input[idx]}' at ${idx}`)
         }
       }
     }

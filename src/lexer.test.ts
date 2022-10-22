@@ -39,4 +39,53 @@ describe('lexer', () => {
 
     runLexerTests(tests)
   })
+
+  test('lexes rules', () => {
+    const tests: LexerTestCase[] = [
+      {
+        input: `div {
+          color: red;
+          height: 10px;
+        }`,
+        expectedTokens: [
+          [SyntaxType.NameToken, 'div'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.NameToken, 'color'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.NameToken, 'red'],
+          [SyntaxType.SemicolonToken, ';'],
+          [SyntaxType.NameToken, 'height'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.ValueToken, '10px'],
+          [SyntaxType.SemicolonToken, ';'],
+          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.EOF, '']
+        ]
+      },
+      {
+        input: `.container {
+          div {
+            height: 10px;
+          }
+        }
+        `,
+        expectedTokens: [
+          [SyntaxType.DotToken, '.'],
+          [SyntaxType.NameToken, 'container'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.NameToken, 'div'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.NameToken, 'height'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.ValueToken, '10px'],
+          [SyntaxType.SemicolonToken, ';'],
+          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.EOF, '']
+        ]
+      }
+    ]
+
+    runLexerTests(tests)
+  })
 })
