@@ -1,5 +1,5 @@
 import { lexer, Token } from './lexer'
-import { parser, Rule } from './parser'
+import { BinaryExpression, parser, Rule } from './parser'
 import { SyntaxType } from './SyntaxType'
 
 describe('parser', () => {
@@ -82,6 +82,133 @@ describe('parser', () => {
                   new Token(SyntaxType.IdentToken, '$primary-color')
                 )
               ]
+            }
+          ]
+        }
+      }
+    ]
+
+    runParserTests(tests)
+  })
+
+  test('operator precedences', () => {
+    const tests: ParserTestCase[] = [
+      {
+        input: `
+        $a: 3 * 2 + 4px;
+        $b: 3 + 2 * 4px;
+        $c: a == b;
+        $d: a != b;
+        $e: 3 % 1 == 2;
+        $f: 3 != 3 % 1;
+        $g: a + b * c / 4 % 5 - 1;
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Declaration,
+              name: '$a',
+              expression: {
+                type: SyntaxType.BinaryExpression,
+                left: new BinaryExpression(
+                  new Token(SyntaxType.ValueToken, '3'),
+                  new Token(SyntaxType.MulToken, '*'),
+                  new Token(SyntaxType.ValueToken, '2')
+                ),
+                operator: new Token(SyntaxType.PlusToken, '+'),
+                right: new Token(SyntaxType.ValueToken, '4px')
+              }
+            },
+            {
+              type: SyntaxType.Declaration,
+              name: '$b',
+              expression: {
+                type: SyntaxType.BinaryExpression,
+                left: new Token(SyntaxType.ValueToken, '3'),
+                operator: new Token(SyntaxType.PlusToken, '+'),
+                right: new BinaryExpression(
+                  new Token(SyntaxType.ValueToken, '2'),
+                  new Token(SyntaxType.MulToken, '*'),
+                  new Token(SyntaxType.ValueToken, '4px')
+                )
+              }
+            },
+            {
+              type: SyntaxType.Declaration,
+              name: '$c',
+              expression: new BinaryExpression(
+                new Token(SyntaxType.NameToken, 'a'),
+                new Token(SyntaxType.EqualsEqualsToken, '=='),
+                new Token(SyntaxType.NameToken, 'b')
+              )
+            },
+            {
+              type: SyntaxType.Declaration,
+              name: '$d',
+              expression: new BinaryExpression(
+                new Token(SyntaxType.NameToken, 'a'),
+                new Token(SyntaxType.BangEqualsToken, '!='),
+                new Token(SyntaxType.NameToken, 'b')
+              )
+            },
+            {
+              type: SyntaxType.Declaration,
+              name: '$e',
+              expression: {
+                type: SyntaxType.BinaryExpression,
+                left: new BinaryExpression(
+                  new Token(SyntaxType.ValueToken, '3'),
+                  new Token(SyntaxType.ModToken, '%'),
+                  new Token(SyntaxType.ValueToken, '1')
+                ),
+                operator: new Token(SyntaxType.EqualsEqualsToken, '=='),
+                right: new Token(SyntaxType.ValueToken, '2')
+              }
+            },
+            {
+              type: SyntaxType.Declaration,
+              name: '$f',
+              expression: {
+                type: SyntaxType.BinaryExpression,
+                left: new Token(SyntaxType.ValueToken, '3'),
+                operator: new Token(SyntaxType.BangEqualsToken, '!='),
+                right: new BinaryExpression(
+                  new Token(SyntaxType.ValueToken, '3'),
+                  new Token(SyntaxType.ModToken, '%'),
+                  new Token(SyntaxType.ValueToken, '1')
+                )
+              }
+            },
+            {
+              type: SyntaxType.Declaration,
+              name: '$g',
+              expression: {
+                type: SyntaxType.BinaryExpression,
+                left: {
+                  type: SyntaxType.BinaryExpression,
+                  left: new Token(SyntaxType.NameToken, 'a'),
+                  operator: new Token(SyntaxType.PlusToken, '+'),
+                  right: {
+                    type: SyntaxType.BinaryExpression,
+                    left: {
+                      type: SyntaxType.BinaryExpression,
+                      left: {
+                        type: SyntaxType.BinaryExpression,
+                        left: new Token(SyntaxType.NameToken, 'b'),
+                        operator: new Token(SyntaxType.MulToken, '*'),
+                        right: new Token(SyntaxType.NameToken, 'c')
+                      },
+                      operator: new Token(SyntaxType.DivToken, '/'),
+                      right: new Token(SyntaxType.ValueToken, '4')
+                    },
+                    operator: new Token(SyntaxType.ModToken, '%'),
+                    right: new Token(SyntaxType.ValueToken, '5')
+                  }
+                },
+                operator: new Token(SyntaxType.MinusToken, '-'),
+                right: new Token(SyntaxType.ValueToken, '1')
+              }
             }
           ]
         }

@@ -57,6 +57,14 @@ export const generator = (scss: SCSS): string => {
 
   const generateRule = (rule: Rule): string => {
     const prefix = ' '.repeat(ident * identUnit)
+    if (
+      rule.expression.type !== SyntaxType.ValueToken &&
+      rule.expression.type !== SyntaxType.NameToken
+    ) {
+      throw new Error(
+        `GenerateRule: unexpected rule.value.type '${rule.expression.type}'`
+      )
+    }
     return prefix + rule.name + ': ' + rule.expression.literal + ';\n'
   }
 

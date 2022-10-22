@@ -21,5 +21,6 @@ export enum SyntaxType {
   SCSS = 'SCSS',
   Block = 'Block',
   Rule = 'Rule',
-  Declaration = 'Declaration'
+  Declaration = 'Declaration',
+  BinaryExpression = 'BinaryExpression'
 }

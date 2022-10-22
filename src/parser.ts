@@ -3,7 +3,7 @@ import { SyntaxType } from './SyntaxType'
 
 export type SCSSChild = Block | Declaration
 export type BlockChild = SCSSChild | Rule
-export type Expression = Token
+export type Expression = Token | BinaryExpression
 export class SCSS {
   readonly type = SyntaxType.SCSS
   constructor(public content: SCSSChild[]) {}
@@ -22,6 +22,15 @@ export class Rule {
 export class Declaration {
   readonly type = SyntaxType.Declaration
   constructor(public name: string, public expression: Expression) {}
+}
+
+export class BinaryExpression {
+  readonly type = SyntaxType.BinaryExpression
+  constructor(
+    public left: Expression,
+    public operator: Token,
+    public right: Expression
+  ) {}
 }
 
 export const parser = (tokens: Token[]): SCSS => {
@@ -64,7 +73,24 @@ export const parser = (tokens: Token[]): SCSS => {
     }
   }
 
-  const parseExpression = (): Expression => {
+  const getBinaryOperatorPrecedence = (token: Token): number => {
+    switch (token.type) {
+      case SyntaxType.BangEqualsToken:
+      case SyntaxType.EqualsEqualsToken:
+        return 1
+      case SyntaxType.PlusToken:
+      case SyntaxType.MinusToken:
+        return 2
+      case SyntaxType.MulToken:
+      case SyntaxType.DivToken:
+      case SyntaxType.ModToken:
+        return 3
+      default:
+        return 0
+    }
+  }
+
+  const parsePrimaryExpression = (): Expression => {
     const token = tokens[idx]
     switch (token.type) {
       case SyntaxType.IdentToken:
@@ -75,6 +101,28 @@ export const parser = (tokens: Token[]): SCSS => {
       default:
         throw new Error(`ParseExpression: unexpected NodeType '${token.type}'`)
     }
+  }
+
+  const parseBinaryExpression = (parentPrecedence: number): Expression => {
+    let left = parsePrimaryExpression()
+
+    while (true) {
+      const operator = tokens[idx]
+      const precedence = getBinaryOperatorPrecedence(operator)
+      if (precedence <= parentPrecedence) {
+        break
+      }
+
+      ++idx
+      const right = parseBinaryExpression(precedence)
+      left = new BinaryExpression(left, operator, right)
+    }
+
+    return left
+  }
+
+  const parseExpression = (): Expression => {
+    return parseBinaryExpression(0)
   }
 
   const parseDeclaration = (): Declaration => {
