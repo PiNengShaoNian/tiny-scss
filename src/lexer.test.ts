@@ -184,4 +184,26 @@ describe('lexer', () => {
 
     runLexerTests(tests)
   })
+
+  test('lexes keywords', () => {
+    const tests: LexerTestCase[] = [
+      {
+        input: '@mixin foo($a, $b) {}',
+        expectedTokens: [
+          [SyntaxType.MixinToken, '@mixin'],
+          [SyntaxType.NameToken, 'foo'],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.IdentToken, '$a'],
+          [SyntaxType.CommaToken, ','],
+          [SyntaxType.IdentToken, '$b'],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.EOF, '']
+        ]
+      }
+    ]
+
+    runLexerTests(tests)
+  })
 })

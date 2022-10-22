@@ -31,6 +31,14 @@ export const lexer = (input: string): Token[] => {
 
     return input.slice(start, idx)
   }
+  const getKeywordType = (keyword: string): SyntaxType | null => {
+    switch (keyword) {
+      case 'mixin':
+        return SyntaxType.MixinToken
+      default:
+        return null
+    }
+  }
 
   while (idx < n) {
     switch (input[idx]) {
@@ -80,6 +88,18 @@ export const lexer = (input: string): Token[] => {
         tokens.push(new Token(SyntaxType.ModToken, '%'))
         ++idx
         break
+      case '(':
+        tokens.push(new Token(SyntaxType.LParenToken, '('))
+        ++idx
+        break
+      case ')':
+        tokens.push(new Token(SyntaxType.RParenToken, ')'))
+        ++idx
+        break
+      case ',':
+        tokens.push(new Token(SyntaxType.CommaToken, ','))
+        ++idx
+        break
       case '!': {
         ++idx
         if (input[idx] === '=') {
@@ -111,6 +131,14 @@ export const lexer = (input: string): Token[] => {
           ++idx
           const name = readName()
           tokens.push(new Token(SyntaxType.IdentToken, '$' + name))
+        } else if (input[idx] === '@' && isLetter(input[idx + 1])) {
+          ++idx
+          const name = readName()
+          const keywordType = getKeywordType(name)
+          if (keywordType === null) {
+            throw new Error(`Lexer: unknown keyword '${name}'`)
+          }
+          tokens.push(new Token(keywordType, '@' + name))
         } else {
           throw new Error(`Lexer: bad character '${input[idx]}' at ${idx}`)
         }

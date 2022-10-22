@@ -15,6 +15,10 @@ export enum SyntaxType {
   MulToken = 'MulToken',
   DivToken = 'DivToken',
   ModToken = 'ModToken',
+  RParenToken = 'RParenToken',
+  LParenToken = 'LParenToken',
+  CommaToken = 'CommaToken',
+  MixinToken = 'MixinToken',
   EOF = 'EOF',
 
   // Nodes
