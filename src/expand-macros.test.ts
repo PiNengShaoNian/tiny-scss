@@ -136,4 +136,22 @@ describe('expand-macros', () => {
 
     runExpandMacrosTests(tests)
   })
+
+  test('expand mixin', () => {
+    const tests: ExpandMacrosTestCase[] = [
+      {
+        input: `
+        @mixin test() {
+
+        }
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: []
+        }
+      }
+    ]
+
+    runExpandMacrosTests(tests)
+  })
 })

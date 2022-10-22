@@ -7,15 +7,17 @@ import {
   Expression,
   Rule,
   SCSS,
-  SCSSChild
+  SCSSChild,
+  Mixin
 } from './parser'
 import { SyntaxType } from './SyntaxType'
 
-type SCSSObject = StringObject | NumberObject | BooleanObject
+type SCSSObject = StringObject | NumberObject | BooleanObject | MixinObject
 enum SCSSObjectType {
   String = 'String',
   Number = 'Number',
-  Boolean = 'Boolean'
+  Boolean = 'Boolean',
+  Mixin = 'Mixin'
 }
 class StringObject {
   readonly type = SCSSObjectType.String
@@ -31,6 +33,10 @@ class BooleanObject {
   readonly type = SCSSObjectType.Boolean
   constructor(public value: boolean) {}
   toString = (): string => this.value.toString()
+}
+class MixinObject {
+  readonly type = SCSSObjectType.Mixin
+  constructor(public value: Mixin, public scope: Scope) {}
 }
 
 class Scope {
@@ -187,6 +193,8 @@ export const expandMacros = (scss: SCSS): SCSS => {
         return expandBlock(node, scope)
       case SyntaxType.Declaration:
         return expandDeclaration(node, scope)
+      case SyntaxType.Mixin:
+        return expandMixin(node, scope)
       default:
         throw new Error(
           `ExpandSCSSChild: unexpected NodeType '${(node as SCSSChild).type}'`
@@ -224,6 +232,14 @@ export const expandMacros = (scss: SCSS): SCSS => {
     }
 
     const obj = evalExpression(value, scope)
+
+    if (
+      obj.type !== SCSSObjectType.Number &&
+      obj.type !== SCSSObjectType.String
+    ) {
+      throw new Error(`ExpandRule: unexpected object type ${obj.type}`)
+    }
+
     return new Rule(
       name,
       new Token(
@@ -238,6 +254,12 @@ export const expandMacros = (scss: SCSS): SCSS => {
   const expandDeclaration = (decl: Declaration, scope: Scope): null => {
     const obj = evalExpression(decl.expression, scope)
     scope.addSymbol(decl.name, obj)
+    return null
+  }
+
+  const expandMixin = (mixin: Mixin, scope: Scope): null => {
+    const obj = new MixinObject(mixin, scope)
+    scope.addSymbol(mixin.name, obj)
     return null
   }
 
