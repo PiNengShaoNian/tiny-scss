@@ -1,13 +1,14 @@
 import { Token } from './lexer'
 import { SyntaxType } from './SyntaxType'
 
-export type SCSSChild = Block
+export type SCSSChild = Block | Declaration
+export type BlockChild = SCSSChild | Rule
+export type Expression = Token
 export class SCSS {
   readonly type = SyntaxType.SCSS
   constructor(public content: SCSSChild[]) {}
 }
 
-export type BlockChild = SCSSChild | Rule
 export class Block {
   readonly type = SyntaxType.Block
   constructor(public selector: string, public body: BlockChild[]) {}
@@ -15,7 +16,12 @@ export class Block {
 
 export class Rule {
   readonly type = SyntaxType.Rule
-  constructor(public name: string, public value: Token) {}
+  constructor(public name: string, public expression: Expression) {}
+}
+
+export class Declaration {
+  readonly type = SyntaxType.Declaration
+  constructor(public name: string, public expression: Expression) {}
 }
 
 export const parser = (tokens: Token[]): SCSS => {
@@ -42,11 +48,42 @@ export const parser = (tokens: Token[]): SCSS => {
     const content: SCSSChild[] = []
 
     while (tokens[idx].type !== SyntaxType.EOF) {
-      const block = parseBlock()
-      content.push(block)
+      const child = parseSCSSChild()
+      content.push(child)
     }
 
     return content
+  }
+
+  const parseSCSSChild = (): SCSSChild => {
+    switch (tokens[idx].type) {
+      case SyntaxType.IdentToken:
+        return parseDeclaration()
+      default:
+        return parseBlock()
+    }
+  }
+
+  const parseExpression = (): Expression => {
+    const token = tokens[idx]
+    switch (token.type) {
+      case SyntaxType.IdentToken:
+      case SyntaxType.NameToken:
+      case SyntaxType.ValueToken:
+        ++idx
+        return token
+      default:
+        throw new Error(`ParseExpression: unexpected NodeType '${token.type}'`)
+    }
+  }
+
+  const parseDeclaration = (): Declaration => {
+    const identToken = matchToken(SyntaxType.IdentToken)
+    matchToken(SyntaxType.ColonToken)
+    const expr = parseExpression()
+    matchToken(SyntaxType.SemicolonToken)
+
+    return new Declaration(identToken.literal, expr)
   }
 
   const parseSelector = (): string => {
@@ -70,8 +107,8 @@ export const parser = (tokens: Token[]): SCSS => {
         const rule = parseRule()
         body.push(rule)
       } else {
-        const block = parseBlock()
-        body.push(block)
+        const child = parseSCSSChild()
+        body.push(child)
       }
     }
 
@@ -90,15 +127,10 @@ export const parser = (tokens: Token[]): SCSS => {
   const parseRule = (): Rule => {
     const ruleNameToke = matchToken(SyntaxType.NameToken)
     matchToken(SyntaxType.ColonToken)
-    let ruleValueToken: Token
-    if (tokens[idx].type === SyntaxType.NameToken) {
-      ruleValueToken = matchToken(SyntaxType.NameToken)
-    } else {
-      ruleValueToken = matchToken(SyntaxType.ValueToken)
-    }
+    const expr = parseExpression()
     matchToken(SyntaxType.SemicolonToken)
 
-    return new Rule(ruleNameToke.literal, ruleValueToken)
+    return new Rule(ruleNameToke.literal, expr)
   }
 
   return parseSCSS()

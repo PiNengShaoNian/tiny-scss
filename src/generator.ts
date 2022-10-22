@@ -57,7 +57,7 @@ export const generator = (scss: SCSS): string => {
 
   const generateRule = (rule: Rule): string => {
     const prefix = ' '.repeat(ident * identUnit)
-    return prefix + rule.name + ': ' + rule.value.literal + ';\n'
+    return prefix + rule.name + ': ' + rule.expression.literal + ';\n'
   }
 
   return generateSCSS(scss)

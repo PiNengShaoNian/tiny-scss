@@ -49,4 +49,45 @@ describe('parser', () => {
 
     runParserTests(tests)
   })
+
+  test('parse declaration and identifier', () => {
+    const tests: ParserTestCase[] = [
+      {
+        input: `
+      $primary-color: red;
+      .container {
+        $width-sm: 10px;
+        color: $primary-color;
+      }
+      `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Declaration,
+              name: '$primary-color',
+              expression: new Token(SyntaxType.NameToken, 'red')
+            },
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                {
+                  type: SyntaxType.Declaration,
+                  name: '$width-sm',
+                  expression: new Token(SyntaxType.ValueToken, '10px')
+                },
+                new Rule(
+                  'color',
+                  new Token(SyntaxType.IdentToken, '$primary-color')
+                )
+              ]
+            }
+          ]
+        }
+      }
+    ]
+
+    runParserTests(tests)
+  })
 })

@@ -13,5 +13,6 @@ export enum SyntaxType {
   // Nodes
   SCSS = 'SCSS',
   Block = 'Block',
-  Rule = 'Rule'
+  Rule = 'Rule',
+  Declaration = 'Declaration'
 }
