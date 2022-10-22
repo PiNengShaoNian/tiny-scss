@@ -8,6 +8,13 @@ export enum SyntaxType {
   SemicolonToken = 'SemicolonToken',
   ValueToken = 'ValueToken',
   IdentToken = 'IdentToken',
+  EqualsEqualsToken = 'EqualsEqualsToken',
+  BangEqualsToken = 'BangEqualsToken',
+  PlusToken = 'PlusToken',
+  MinusToken = 'MinusToken',
+  MulToken = 'MulToken',
+  DivToken = 'DivToken',
+  ModToken = 'ModToken',
   EOF = 'EOF',
 
   // Nodes

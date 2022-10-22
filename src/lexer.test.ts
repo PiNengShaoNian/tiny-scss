@@ -138,4 +138,50 @@ describe('lexer', () => {
 
     runLexerTests(tests)
   })
+
+  test('lexes expressions', () => {
+    const tests: LexerTestCase[] = [
+      {
+        input: `
+        a == b
+        $a == 1
+        b != a
+        a + 3
+        a - 3
+        a * 3
+        a / 3
+        a % 3
+        `,
+        expectedTokens: [
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.EqualsEqualsToken, '=='],
+          [SyntaxType.NameToken, 'b'],
+          [SyntaxType.IdentToken, '$a'],
+          [SyntaxType.EqualsEqualsToken, '=='],
+          [SyntaxType.ValueToken, '1'],
+          [SyntaxType.NameToken, 'b'],
+          [SyntaxType.BangEqualsToken, '!='],
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.PlusToken, '+'],
+          [SyntaxType.ValueToken, '3'],
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.MinusToken, '-'],
+          [SyntaxType.ValueToken, '3'],
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.MulToken, '*'],
+          [SyntaxType.ValueToken, '3'],
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.DivToken, '/'],
+          [SyntaxType.ValueToken, '3'],
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.ModToken, '%'],
+          [SyntaxType.ValueToken, '3'],
+          [SyntaxType.EOF, '']
+        ]
+      }
+    ]
+
+    runLexerTests(tests)
+  })
 })

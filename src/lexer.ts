@@ -60,6 +60,46 @@ export const lexer = (input: string): Token[] => {
         tokens.push(new Token(SyntaxType.SemicolonToken, ';'))
         ++idx
         break
+      case '+':
+        tokens.push(new Token(SyntaxType.PlusToken, '+'))
+        ++idx
+        break
+      case '-':
+        tokens.push(new Token(SyntaxType.MinusToken, '-'))
+        ++idx
+        break
+      case '*':
+        tokens.push(new Token(SyntaxType.MulToken, '*'))
+        ++idx
+        break
+      case '/':
+        tokens.push(new Token(SyntaxType.DivToken, '/'))
+        ++idx
+        break
+      case '%':
+        tokens.push(new Token(SyntaxType.ModToken, '%'))
+        ++idx
+        break
+      case '!': {
+        ++idx
+        if (input[idx] === '=') {
+          tokens.push(new Token(SyntaxType.BangEqualsToken, '!='))
+          ++idx
+        } else {
+          throw new Error(`Lexer: bad character '${input[idx]}' at ${idx}`)
+        }
+        break
+      }
+      case '=': {
+        ++idx
+        if (input[idx] === '=') {
+          tokens.push(new Token(SyntaxType.EqualsEqualsToken, '=='))
+          ++idx
+        } else {
+          throw new Error(`Lexer: bad character '${input[idx]}' at ${idx}`)
+        }
+        break
+      }
       default: {
         if (isLetter(input[idx])) {
           const name = readName()
