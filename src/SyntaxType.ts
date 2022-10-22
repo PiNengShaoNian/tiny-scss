@@ -7,6 +7,7 @@ export enum SyntaxType {
   ColonToken = 'ColonToken',
   SemicolonToken = 'SemicolonToken',
   ValueToken = 'ValueToken',
+  IdentToken = 'IdentToken',
   EOF = 'EOF',
 
   // Nodes

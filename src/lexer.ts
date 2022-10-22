@@ -13,7 +13,13 @@ export const lexer = (input: string): Token[] => {
   const readName = (): string => {
     const start = idx
 
-    while (idx < n && isLetter(input[idx])) ++idx
+    while (
+      (idx < n && isLetter(input[idx])) ||
+      isDigit(input[idx]) ||
+      input[idx] === '-'
+    ) {
+      ++idx
+    }
 
     return input.slice(start, idx)
   }
@@ -61,6 +67,10 @@ export const lexer = (input: string): Token[] => {
         } else if (isDigit(input[idx])) {
           const value = readValue()
           tokens.push(new Token(SyntaxType.ValueToken, value))
+        } else if (input[idx] === '$' && isLetter(input[idx + 1])) {
+          ++idx
+          const name = readName()
+          tokens.push(new Token(SyntaxType.IdentToken, '$' + name))
         } else {
           throw new Error(`Lexer: bad character '${input[idx]}' at ${idx}`)
         }

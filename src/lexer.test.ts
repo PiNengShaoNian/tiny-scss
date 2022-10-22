@@ -88,4 +88,54 @@ describe('lexer', () => {
 
     runLexerTests(tests)
   })
+
+  test('lexes identifier', () => {
+    const tests: LexerTestCase[] = [
+      {
+        input: `
+        $primary-color: red;
+        $base-width: 10px;
+        $lh: 10;
+        $test1: 1;
+        $test1-3: 2;
+        color: $primary-color;
+        `,
+        expectedTokens: [
+          [SyntaxType.IdentToken, '$primary-color'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.NameToken, 'red'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.IdentToken, '$base-width'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.ValueToken, '10px'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.IdentToken, '$lh'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.ValueToken, '10'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.IdentToken, '$test1'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.ValueToken, '1'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.IdentToken, '$test1-3'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.ValueToken, '2'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.NameToken, 'color'],
+          [SyntaxType.ColonToken, ':'],
+          [SyntaxType.IdentToken, '$primary-color'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.EOF, '']
+        ]
+      }
+    ]
+
+    runLexerTests(tests)
+  })
 })
