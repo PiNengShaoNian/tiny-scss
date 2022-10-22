@@ -1,4 +1,5 @@
 export enum SyntaxType {
+  // Tokens
   DotToken = 'DotToken',
   NameToken = 'NameToken',
   LBraceToken = 'LBraceToken',
@@ -6,5 +7,10 @@ export enum SyntaxType {
   ColonToken = 'ColonToken',
   SemicolonToken = 'SemicolonToken',
   ValueToken = 'ValueToken',
-  EOF = 'EOF'
+  EOF = 'EOF',
+
+  // Nodes
+  SCSS = 'SCSS',
+  Block = 'Block',
+  Rule = 'Rule'
 }
