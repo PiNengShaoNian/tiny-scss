@@ -102,6 +102,35 @@ describe('expand-macros', () => {
             }
           ]
         }
+      },
+      {
+        input: `
+        .container {
+          height: 3 + 4 * 5px;
+          height: 3 * 4 + 5px;
+          height: 5 / 2px;
+          height: 1 - 10 % 3px;
+          $a: 3 * 3px;
+          $b: $a * 3 / 3;
+          height: $b;
+        }
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                new Rule('height', new Token(SyntaxType.ValueToken, '23px')),
+                new Rule('height', new Token(SyntaxType.ValueToken, '17px')),
+                new Rule('height', new Token(SyntaxType.ValueToken, '2.5px')),
+                new Rule('height', new Token(SyntaxType.ValueToken, '0px')),
+                new Rule('height', new Token(SyntaxType.ValueToken, '9px'))
+              ]
+            }
+          ]
+        }
       }
     ]
 

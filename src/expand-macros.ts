@@ -1,5 +1,6 @@
 import { Token } from './lexer'
 import {
+  BinaryExpression,
   Block,
   BlockChild,
   Declaration,
@@ -10,10 +11,11 @@ import {
 } from './parser'
 import { SyntaxType } from './SyntaxType'
 
-type SCSSObject = StringObject | NumberObject
+type SCSSObject = StringObject | NumberObject | BooleanObject
 enum SCSSObjectType {
   String = 'String',
-  Number = 'Number'
+  Number = 'Number',
+  Boolean = 'Boolean'
 }
 class StringObject {
   readonly type = SCSSObjectType.String
@@ -24,6 +26,11 @@ class NumberObject {
   readonly type = SCSSObjectType.Number
   constructor(public value: number, public unit: string | null) {}
   toString = (): string => `${this.value}${this.unit ?? ''}`
+}
+class BooleanObject {
+  readonly type = SCSSObjectType.Boolean
+  constructor(public value: boolean) {}
+  toString = (): string => this.value.toString()
 }
 
 class Scope {
@@ -65,6 +72,73 @@ export const expandMacros = (scss: SCSS): SCSS => {
     )
   }
 
+  const executeNumberBinaryOperator = (
+    left: SCSSObject,
+    operator: Token,
+    right: SCSSObject
+  ): SCSSObject => {
+    if (
+      left.type !== SCSSObjectType.Number ||
+      right.type !== SCSSObjectType.Number
+    ) {
+      throw new Error(
+        `ExecuteNumberBinaryOperator: unexpected operand type, '${left.type}'' '${operator.literal}'' '${right.type}'`
+      )
+    }
+
+    if (left.unit !== null && right.unit !== null && left.unit !== right.unit) {
+      throw new Error(
+        `ExecuteNumberBinaryOperator: incompatible unit '${JSON.stringify(
+          left
+        )}' and '${JSON.stringify(right)}'`
+      )
+    }
+
+    const unit = left.unit ?? right.unit
+    switch (operator.type) {
+      case SyntaxType.PlusToken:
+        return new NumberObject(left.value + right.value, unit)
+      case SyntaxType.MinusToken:
+        return new NumberObject(left.value - right.value, unit)
+      case SyntaxType.MulToken:
+        return new NumberObject(left.value * right.value, unit)
+      case SyntaxType.DivToken:
+        return new NumberObject(left.value / right.value, unit)
+      case SyntaxType.ModToken:
+        return new NumberObject(left.value % right.value, unit)
+      default:
+        throw new Error(
+          `ExecuteNumberBinaryOperator: unexpected operator type '${operator.type}'`
+        )
+    }
+  }
+
+  const evalBinaryExpression = (
+    bs: BinaryExpression,
+    scope: Scope
+  ): SCSSObject => {
+    const { left, right, operator } = bs
+
+    const leftObj = evalExpression(left, scope)
+    const rightObj = evalExpression(right, scope)
+    switch (operator.type) {
+      case SyntaxType.EqualsEqualsToken:
+        return new BooleanObject(leftObj.value === rightObj.value)
+      case SyntaxType.BangEqualsToken:
+        return new BooleanObject(leftObj.value !== rightObj.value)
+      case SyntaxType.PlusToken:
+      case SyntaxType.MinusToken:
+      case SyntaxType.MulToken:
+      case SyntaxType.DivToken:
+      case SyntaxType.ModToken:
+        return executeNumberBinaryOperator(leftObj, operator, rightObj)
+      default:
+        throw new Error(
+          `EvalBinaryExpression: unexpected operator type ${operator.type}`
+        )
+    }
+  }
+
   const evalExpression = (expr: Expression, scope: Scope): SCSSObject => {
     switch (expr.type) {
       case SyntaxType.IdentToken: {
@@ -80,6 +154,8 @@ export const expandMacros = (scss: SCSS): SCSS => {
         return new StringObject(expr.literal)
       case SyntaxType.ValueToken:
         return evalValueToken(expr)
+      case SyntaxType.BinaryExpression:
+        return evalBinaryExpression(expr as BinaryExpression, scope)
       default:
         throw new Error(`EvalExpression: unexpected NodeType '${expr.type}'`)
     }
