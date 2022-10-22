@@ -1,7 +1,7 @@
 import { Token } from './lexer'
 import { SyntaxType } from './SyntaxType'
 
-export type SCSSChild = Block | Declaration
+export type SCSSChild = Block | Declaration | Mixin
 export type BlockChild = SCSSChild | Rule
 export type Expression = Token | BinaryExpression
 export class SCSS {
@@ -33,6 +33,15 @@ export class BinaryExpression {
   ) {}
 }
 
+export class Mixin {
+  readonly type = SyntaxType.Mixin
+  constructor(
+    public name: string,
+    public parameters: string[],
+    public body: BlockChild[]
+  ) {}
+}
+
 export const parser = (tokens: Token[]): SCSS => {
   let idx = 0
   const matchToken = (type: SyntaxType): Token => {
@@ -46,6 +55,24 @@ export const parser = (tokens: Token[]): SCSS => {
     ++idx
     return token
   }
+
+  const getBinaryOperatorPrecedence = (token: Token): number => {
+    switch (token.type) {
+      case SyntaxType.BangEqualsToken:
+      case SyntaxType.EqualsEqualsToken:
+        return 1
+      case SyntaxType.PlusToken:
+      case SyntaxType.MinusToken:
+        return 2
+      case SyntaxType.MulToken:
+      case SyntaxType.DivToken:
+      case SyntaxType.ModToken:
+        return 3
+      default:
+        return 0
+    }
+  }
+
   const parseSCSS = (): SCSS => {
     const content = parseSCSSContent()
     matchToken(SyntaxType.EOF)
@@ -68,26 +95,38 @@ export const parser = (tokens: Token[]): SCSS => {
     switch (tokens[idx].type) {
       case SyntaxType.IdentToken:
         return parseDeclaration()
+      case SyntaxType.MixinToken:
+        return parseMixin()
       default:
         return parseBlock()
     }
   }
 
-  const getBinaryOperatorPrecedence = (token: Token): number => {
-    switch (token.type) {
-      case SyntaxType.BangEqualsToken:
-      case SyntaxType.EqualsEqualsToken:
-        return 1
-      case SyntaxType.PlusToken:
-      case SyntaxType.MinusToken:
-        return 2
-      case SyntaxType.MulToken:
-      case SyntaxType.DivToken:
-      case SyntaxType.ModToken:
-        return 3
-      default:
-        return 0
+  const parseParameters = (): string[] => {
+    const parameters: string[] = []
+
+    while (tokens[idx].type !== SyntaxType.RParenToken) {
+      const parameter = matchToken(SyntaxType.IdentToken)
+      parameters.push(parameter.literal)
+      if (tokens[idx].type === SyntaxType.CommaToken) {
+        ++idx
+      }
     }
+
+    return parameters
+  }
+
+  const parseMixin = (): Mixin => {
+    matchToken(SyntaxType.MixinToken)
+    const mixinNameToken = matchToken(SyntaxType.NameToken)
+    matchToken(SyntaxType.LParenToken)
+    const parameters = parseParameters()
+    matchToken(SyntaxType.RParenToken)
+    matchToken(SyntaxType.LBraceToken)
+    const body = parseBlockBody()
+    matchToken(SyntaxType.RBraceToken)
+
+    return new Mixin(mixinNameToken.literal, parameters, body)
   }
 
   const parsePrimaryExpression = (): Expression => {

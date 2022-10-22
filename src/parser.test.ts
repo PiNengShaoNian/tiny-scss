@@ -217,4 +217,56 @@ describe('parser', () => {
 
     runParserTests(tests)
   })
+
+  test('parse mixin', () => {
+    const tests: ParserTestCase[] = [
+      {
+        input: `
+        @mixin test() {
+        }`,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Mixin,
+              name: 'test',
+              parameters: [],
+              body: []
+            }
+          ]
+        }
+      },
+      {
+        input: `
+        @mixin test($a, $b) {
+          height: 100px;
+          .box {
+            width: 30px;
+          }
+        }`,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Mixin,
+              name: 'test',
+              parameters: ['$a', '$b'],
+              body: [
+                new Rule('height', new Token(SyntaxType.ValueToken, '100px')),
+                {
+                  type: SyntaxType.Block,
+                  selector: '.box',
+                  body: [
+                    new Rule('width', new Token(SyntaxType.ValueToken, '30px'))
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+
+    runParserTests(tests)
+  })
 })
