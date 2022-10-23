@@ -1,7 +1,7 @@
 import { Token } from './lexer'
 import { SyntaxType } from './SyntaxType'
 
-export type SCSSChild = Block | Declaration | Mixin
+export type SCSSChild = Block | Declaration | Mixin | Include
 export type BlockChild = SCSSChild | Rule
 export type Expression = Token | BinaryExpression
 export class SCSS {
@@ -40,6 +40,11 @@ export class Mixin {
     public parameters: string[],
     public body: BlockChild[]
   ) {}
+}
+
+export class Include {
+  readonly type = SyntaxType.Include
+  constructor(public name: string, public args: Expression[]) {}
 }
 
 export const parser = (tokens: Token[]): SCSS => {
@@ -97,9 +102,36 @@ export const parser = (tokens: Token[]): SCSS => {
         return parseDeclaration()
       case SyntaxType.MixinToken:
         return parseMixin()
+      case SyntaxType.IncludeToken:
+        return parseInclude()
       default:
         return parseBlock()
     }
+  }
+
+  const parseArguments = (): Expression[] => {
+    const args: Expression[] = []
+
+    while (tokens[idx].type !== SyntaxType.RParenToken) {
+      const arg = parseExpression()
+      args.push(arg)
+      if (tokens[idx].type === SyntaxType.CommaToken) {
+        ++idx
+      }
+    }
+
+    return args
+  }
+
+  const parseInclude = (): Include => {
+    matchToken(SyntaxType.IncludeToken)
+    const nameToken = matchToken(SyntaxType.NameToken)
+    matchToken(SyntaxType.LParenToken)
+    const args = parseArguments()
+    matchToken(SyntaxType.RParenToken)
+    matchToken(SyntaxType.SemicolonToken)
+
+    return new Include(nameToken.literal, args)
   }
 
   const parseParameters = (): string[] => {
@@ -137,6 +169,12 @@ export const parser = (tokens: Token[]): SCSS => {
       case SyntaxType.ValueToken:
         ++idx
         return token
+      case SyntaxType.LParenToken: {
+        ++idx
+        const expr = parseExpression()
+        matchToken(SyntaxType.RParenToken)
+        return expr
+      }
       default:
         throw new Error(`ParseExpression: unexpected NodeType '${token.type}'`)
     }

@@ -28,5 +28,6 @@ export enum SyntaxType {
   Rule = 'Rule',
   Declaration = 'Declaration',
   BinaryExpression = 'BinaryExpression',
-  Mixin = 'Mixin'
+  Mixin = 'Mixin',
+  Include = 'Include'
 }

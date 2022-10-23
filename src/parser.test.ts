@@ -269,4 +269,55 @@ describe('parser', () => {
 
     runParserTests(tests)
   })
+
+  test('parse include', () => {
+    const tests: ParserTestCase[] = [
+      {
+        input: `
+            @include test();
+            @include test(1, 2);
+            @include test((1 + 2) * 3, 4px, $a);
+            `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Include,
+              name: 'test',
+              args: []
+            },
+            {
+              type: SyntaxType.Include,
+              name: 'test',
+              args: [
+                new Token(SyntaxType.ValueToken, '1'),
+                new Token(SyntaxType.ValueToken, '2')
+              ]
+            },
+            {
+              type: SyntaxType.Include,
+              name: 'test',
+              args: [
+                {
+                  type: SyntaxType.BinaryExpression,
+                  left: {
+                    type: SyntaxType.BinaryExpression,
+                    left: new Token(SyntaxType.ValueToken, '1'),
+                    operator: new Token(SyntaxType.PlusToken, '+'),
+                    right: new Token(SyntaxType.ValueToken, '2')
+                  },
+                  operator: new Token(SyntaxType.MulToken, '*'),
+                  right: new Token(SyntaxType.ValueToken, '3')
+                },
+                new Token(SyntaxType.ValueToken, '4px'),
+                new Token(SyntaxType.IdentToken, '$a')
+              ]
+            }
+          ]
+        }
+      }
+    ]
+
+    runParserTests(tests)
+  })
 })
