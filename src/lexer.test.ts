@@ -255,4 +255,36 @@ describe('lexer', () => {
 
     runLexerTests(tests)
   })
+
+  test('lexes if', () => {
+    const tests: LexerTestCase[] = [
+      {
+        input: `
+            @if $a == a {
+            } @else if($b != b) {
+            }
+            `,
+        expectedTokens: [
+          [SyntaxType.IfToken, '@if'],
+          [SyntaxType.IdentToken, '$a'],
+          [SyntaxType.EqualsEqualsToken, '=='],
+          [SyntaxType.NameToken, 'a'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.ElseToken, '@else'],
+          [SyntaxType.NameToken, 'if'],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.IdentToken, '$b'],
+          [SyntaxType.BangEqualsToken, '!='],
+          [SyntaxType.NameToken, 'b'],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.EOF, '']
+        ]
+      }
+    ]
+
+    runLexerTests(tests)
+  })
 })

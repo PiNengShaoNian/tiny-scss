@@ -20,6 +20,8 @@ export enum SyntaxType {
   CommaToken = 'CommaToken',
   MixinToken = 'MixinToken',
   IncludeToken = 'IncludeToken',
+  IfToken = 'IfToken',
+  ElseToken = 'ElseToken',
   EOF = 'EOF',
 
   // Nodes
