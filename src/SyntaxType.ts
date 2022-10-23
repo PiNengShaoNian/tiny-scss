@@ -19,6 +19,7 @@ export enum SyntaxType {
   LParenToken = 'LParenToken',
   CommaToken = 'CommaToken',
   MixinToken = 'MixinToken',
+  IncludeToken = 'IncludeToken',
   EOF = 'EOF',
 
   // Nodes

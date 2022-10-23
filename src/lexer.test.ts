@@ -206,4 +206,53 @@ describe('lexer', () => {
 
     runLexerTests(tests)
   })
+
+  test('lexes include', () => {
+    const tests: LexerTestCase[] = [
+      {
+        input: `
+        @include test();
+        @include test(1, 2);
+        @include test((1 + 2) * 3, 4px, $a);
+        `,
+        expectedTokens: [
+          [SyntaxType.IncludeToken, '@include'],
+          [SyntaxType.NameToken, 'test'],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.IncludeToken, '@include'],
+          [SyntaxType.NameToken, 'test'],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.ValueToken, '1'],
+          [SyntaxType.CommaToken, ','],
+          [SyntaxType.ValueToken, '2'],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.IncludeToken, '@include'],
+          [SyntaxType.NameToken, 'test'],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.ValueToken, '1'],
+          [SyntaxType.PlusToken, '+'],
+          [SyntaxType.ValueToken, '2'],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.MulToken, '*'],
+          [SyntaxType.ValueToken, '3'],
+          [SyntaxType.CommaToken, ','],
+          [SyntaxType.ValueToken, '4px'],
+          [SyntaxType.CommaToken, ','],
+          [SyntaxType.IdentToken, '$a'],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.SemicolonToken, ';'],
+
+          [SyntaxType.EOF, '']
+        ]
+      }
+    ]
+
+    runLexerTests(tests)
+  })
 })
