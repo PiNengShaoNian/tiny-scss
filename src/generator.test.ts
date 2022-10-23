@@ -132,6 +132,28 @@ describe('generator', () => {
           background-color: blue;
           box-sizing: border-box;
         }`
+      },
+      {
+        input: `
+        @mixin test($n) {
+          @if $n == 0 {
+          } @else {
+            height: $n + 0px;
+            @include test($n - 1);
+          }
+        }
+
+        .container {
+          @include test(3);
+        }
+        `,
+        expected: `
+        .container {
+          height: 3px;
+          height: 2px;
+          height: 1px;
+        }
+        `
       }
     ]
 

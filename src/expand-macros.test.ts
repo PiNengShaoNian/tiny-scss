@@ -202,6 +202,43 @@ describe('expand-macros', () => {
             }
           ]
         }
+      },
+      {
+        input: `
+      @mixin test($size) {
+        @if $size == large {
+          height: 100px;
+        } @else if $size == medium {
+          height: 80px;
+        } @else if $size == small {
+          height: 60px;
+        } @else {
+          height: 40px;
+        }
+      }
+
+      .container {
+        @include test(foo);
+        @include test(large);
+        @include test(medium);
+        @include test(small);
+      }
+      `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                new Rule('height', new Token(SyntaxType.ValueToken, '40px')),
+                new Rule('height', new Token(SyntaxType.ValueToken, '100px')),
+                new Rule('height', new Token(SyntaxType.ValueToken, '80px')),
+                new Rule('height', new Token(SyntaxType.ValueToken, '60px'))
+              ]
+            }
+          ]
+        }
       }
     ]
 

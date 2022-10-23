@@ -9,7 +9,8 @@ import {
   SCSS,
   SCSSChild,
   Mixin,
-  Include
+  Include,
+  IfClause
 } from './parser'
 import { SyntaxType } from './SyntaxType'
 
@@ -87,6 +88,36 @@ export const expandMacros = (scss: SCSS): SCSS => {
     }
 
     return extendedScope
+  }
+
+  const findTargetBranch = (
+    ifClause: IfClause,
+    scope: Scope
+  ): BlockChild[] | null => {
+    const branches = ifClause.branches
+    let targetBranch: BlockChild[] | null = null
+    for (const branch of branches) {
+      const condition = evalExpression(branch.condition, scope)
+
+      if (condition.type !== SCSSObjectType.Boolean) {
+        throw new Error(
+          `FindTargetBranch: unexpected ObjectType ${condition.type}, want=${
+            SCSSObjectType.Boolean
+          } (${JSON.stringify(branch.condition)})`
+        )
+      }
+
+      if (condition.value) {
+        targetBranch = branch.body
+        break
+      }
+    }
+
+    if (targetBranch == null) {
+      targetBranch = ifClause.alternative
+    }
+
+    return targetBranch
   }
 
   const evalValueToken = (token: Token): NumberObject => {
@@ -228,11 +259,22 @@ export const expandMacros = (scss: SCSS): SCSS => {
         return expandMixin(node, scope)
       case SyntaxType.Include:
         return expandInclude(node, scope) as SCSSChild[]
+      case SyntaxType.IfClause:
+        return expandIfClause(node, scope) as SCSSChild[]
       default:
         throw new Error(
           `ExpandSCSSChild: unexpected NodeType '${(node as SCSSChild).type}'`
         )
     }
+  }
+
+  const expandIfClause = (ifClause: IfClause, scope: Scope): BlockChild[] => {
+    const targetBranch = findTargetBranch(ifClause, scope)
+
+    if (targetBranch === null) return []
+    const dummyBlock = new Block('', targetBranch)
+
+    return expandBlock(dummyBlock, scope).body
   }
 
   const expandInclude = (include: Include, scope: Scope): BlockChild[] => {
