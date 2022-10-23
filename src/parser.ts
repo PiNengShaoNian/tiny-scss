@@ -1,7 +1,7 @@
 import { Token } from './lexer'
 import { SyntaxType } from './SyntaxType'
 
-export type SCSSChild = Block | Declaration | Mixin | Include
+export type SCSSChild = Block | Declaration | Mixin | Include | IfClause
 export type BlockChild = SCSSChild | Rule
 export type Expression = Token | BinaryExpression
 export class SCSS {
@@ -45,6 +45,18 @@ export class Mixin {
 export class Include {
   readonly type = SyntaxType.Include
   constructor(public name: string, public args: Expression[]) {}
+}
+
+export class Branch {
+  constructor(public condition: Expression, public body: BlockChild[]) {}
+}
+
+export class IfClause {
+  readonly type = SyntaxType.IfClause
+  constructor(
+    public branches: Branch[],
+    public alternative: BlockChild[] | null
+  ) {}
 }
 
 export const parser = (tokens: Token[]): SCSS => {
@@ -104,9 +116,45 @@ export const parser = (tokens: Token[]): SCSS => {
         return parseMixin()
       case SyntaxType.IncludeToken:
         return parseInclude()
+      case SyntaxType.IfToken:
+        return parseIfClause()
       default:
         return parseBlock()
     }
+  }
+
+  const parseIfClause = (): IfClause => {
+    matchToken(SyntaxType.IfToken)
+    const ifCondition = parseExpression()
+    matchToken(SyntaxType.LBraceToken)
+    const ifBody = parseBlockBody()
+    matchToken(SyntaxType.RBraceToken)
+    const branches: Branch[] = []
+    branches.push(new Branch(ifCondition, ifBody))
+
+    while (
+      tokens[idx].type === SyntaxType.ElseToken &&
+      tokens[idx + 1].type === SyntaxType.NameToken &&
+      tokens[idx + 1].literal === 'if'
+    ) {
+      matchToken(SyntaxType.ElseToken)
+      matchToken(SyntaxType.NameToken)
+      const elseIfCondition = parseExpression()
+      matchToken(SyntaxType.LBraceToken)
+      const elseIfBody = parseBlockBody()
+      matchToken(SyntaxType.RBraceToken)
+      branches.push(new Branch(elseIfCondition, elseIfBody))
+    }
+
+    let alternative: null | BlockChild[] = null
+    if (tokens[idx].type === SyntaxType.ElseToken) {
+      matchToken(SyntaxType.ElseToken)
+      matchToken(SyntaxType.LBraceToken)
+      alternative = parseBlockBody()
+      matchToken(SyntaxType.RBraceToken)
+    }
+
+    return new IfClause(branches, alternative)
   }
 
   const parseArguments = (): Expression[] => {

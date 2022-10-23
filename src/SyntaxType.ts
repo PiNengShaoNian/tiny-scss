@@ -31,5 +31,6 @@ export enum SyntaxType {
   Declaration = 'Declaration',
   BinaryExpression = 'BinaryExpression',
   Mixin = 'Mixin',
-  Include = 'Include'
+  Include = 'Include',
+  IfClause = 'IfClause'
 }

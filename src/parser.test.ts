@@ -315,6 +315,57 @@ describe('parser', () => {
             }
           ]
         }
+      },
+      {
+        input: `
+      @if $a == a {
+      } @else if($b != b) {
+      } @else if c == 3px {
+      } @else {
+        height: 3px;
+      }
+      `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.IfClause,
+              branches: [
+                {
+                  condition: new BinaryExpression(
+                    new Token(SyntaxType.IdentToken, '$a'),
+                    new Token(SyntaxType.EqualsEqualsToken, '=='),
+                    new Token(SyntaxType.NameToken, 'a')
+                  ),
+                  body: []
+                },
+                {
+                  condition: new BinaryExpression(
+                    new Token(SyntaxType.IdentToken, '$b'),
+                    new Token(SyntaxType.BangEqualsToken, '!='),
+                    new Token(SyntaxType.NameToken, 'b')
+                  ),
+                  body: []
+                },
+                {
+                  condition: new BinaryExpression(
+                    new Token(SyntaxType.NameToken, 'c'),
+                    new Token(SyntaxType.EqualsEqualsToken, '=='),
+                    new Token(SyntaxType.ValueToken, '3px')
+                  ),
+                  body: []
+                }
+              ],
+              alternative: [
+                {
+                  type: SyntaxType.Rule,
+                  name: 'height',
+                  expression: new Token(SyntaxType.ValueToken, '3px')
+                }
+              ]
+            }
+          ]
+        }
       }
     ]
 
