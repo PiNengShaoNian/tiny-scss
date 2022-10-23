@@ -8,7 +8,8 @@ import {
   Rule,
   SCSS,
   SCSSChild,
-  Mixin
+  Mixin,
+  Include
 } from './parser'
 import { SyntaxType } from './SyntaxType'
 
@@ -63,6 +64,31 @@ class Scope {
 }
 
 export const expandMacros = (scss: SCSS): SCSS => {
+  const extendScope = (
+    obj: MixinObject,
+    execScope: Scope,
+    args: Expression[]
+  ): Scope => {
+    const extendedScope = new Scope(obj.scope)
+    const parameters = obj.value.parameters
+
+    if (parameters.length !== args.length) {
+      throw new Error(
+        `ExtendScope: ${obj.value.name} want ${
+          parameters.length
+        } arguments, got=${args.length} (${JSON.stringify(args)})`
+      )
+    }
+
+    for (let i = 0; i < parameters.length; ++i) {
+      const arg = evalExpression(args[i], execScope)
+      const parameter = parameters[i]
+      extendedScope.addSymbol(parameter, arg)
+    }
+
+    return extendedScope
+  }
+
   const evalValueToken = (token: Token): NumberObject => {
     const literal = token.literal
     const n = literal.length
@@ -179,7 +205,9 @@ export const expandMacros = (scss: SCSS): SCSS => {
     const children: SCSSChild[] = []
     for (const node of content) {
       const child = expandSCSSChild(node, scope)
-      if (child !== null) {
+      if (Array.isArray(child)) {
+        children.push(...child)
+      } else if (child !== null) {
         children.push(child)
       }
     }
@@ -187,7 +215,10 @@ export const expandMacros = (scss: SCSS): SCSS => {
     return children
   }
 
-  const expandSCSSChild = (node: SCSSChild, scope: Scope): SCSSChild | null => {
+  const expandSCSSChild = (
+    node: SCSSChild,
+    scope: Scope
+  ): SCSSChild | SCSSChild[] | null => {
     switch (node.type) {
       case SyntaxType.Block:
         return expandBlock(node, scope)
@@ -195,11 +226,25 @@ export const expandMacros = (scss: SCSS): SCSS => {
         return expandDeclaration(node, scope)
       case SyntaxType.Mixin:
         return expandMixin(node, scope)
+      case SyntaxType.Include:
+        return expandInclude(node, scope) as SCSSChild[]
       default:
         throw new Error(
           `ExpandSCSSChild: unexpected NodeType '${(node as SCSSChild).type}'`
         )
     }
+  }
+
+  const expandInclude = (include: Include, scope: Scope): BlockChild[] => {
+    const mixinObj = scope.lookup(include.name)
+    if (mixinObj === null || mixinObj.type !== SCSSObjectType.Mixin) {
+      throw new Error(`ExpandInclude: Mixin '${include.name}' is not defined`)
+    }
+    const extendedScope = extendScope(mixinObj, scope, include.args)
+    const dummyBlock = new Block('', mixinObj.value.body)
+    const expandedBlock = expandBlock(dummyBlock, extendedScope)
+
+    return expandedBlock.body
   }
 
   const expandBlock = (block: Block, scope: Scope): Block => {
@@ -212,7 +257,9 @@ export const expandMacros = (scss: SCSS): SCSS => {
           break
         default: {
           const child = expandSCSSChild(node, blockScope)
-          if (child !== null) {
+          if (Array.isArray(child)) {
+            body.push(...child)
+          } else if (child !== null) {
             body.push(child)
           }
         }

@@ -149,6 +149,59 @@ describe('expand-macros', () => {
           type: SyntaxType.SCSS,
           content: []
         }
+      },
+      {
+        input: `
+        $border-color: pink;
+        @mixin color($fc, $bc) {
+          color: $fc;
+          background-color: $bc;
+          border-color: $border-color;
+        }
+  
+        .container {
+          @include color(red, blue);
+        }
+  
+        .box {
+          @include color(indigo, purple);
+        }
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                new Rule('color', new Token(SyntaxType.NameToken, 'red')),
+                new Rule(
+                  'background-color',
+                  new Token(SyntaxType.NameToken, 'blue')
+                ),
+                new Rule(
+                  'border-color',
+                  new Token(SyntaxType.NameToken, 'pink')
+                )
+              ]
+            },
+            {
+              type: SyntaxType.Block,
+              selector: '.box',
+              body: [
+                new Rule('color', new Token(SyntaxType.NameToken, 'indigo')),
+                new Rule(
+                  'background-color',
+                  new Token(SyntaxType.NameToken, 'purple')
+                ),
+                new Rule(
+                  'border-color',
+                  new Token(SyntaxType.NameToken, 'pink')
+                )
+              ]
+            }
+          ]
+        }
       }
     ]
 

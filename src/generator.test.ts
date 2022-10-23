@@ -88,4 +88,53 @@ describe('generator', () => {
 
     runGeneratorTests(tests)
   })
+
+  test('generate mixin and include', () => {
+    const tests: GeneratorTestCase[] = [
+      {
+        input: `
+        @mixin color($fg, $bg) {
+          color: $fg;
+          background-color: $bg;
+        }
+        @mixin center() {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .container {
+          margin: 10px;
+          @mixin avatar($round, $w) {
+            @include center();
+            border-radius: $round;
+            width: $w;
+            height: $w;
+          }
+          .box {
+            @include avatar(50px, 100px);
+            @include color(red, blue);
+            box-sizing: border-box;
+          }
+        }`,
+        expected: `
+        .container {
+          margin: 10px;
+        }
+        .container .box {
+          display: flex;
+          justify-content: center;
+          align-items: center;    
+          border-radius: 50px;
+          width: 100px;
+          height: 100px;
+          color: red;
+          background-color: blue;
+          box-sizing: border-box;
+        }`
+      }
+    ]
+
+    runGeneratorTests(tests)
+  })
 })
