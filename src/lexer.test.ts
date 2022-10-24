@@ -188,17 +188,21 @@ describe('lexer', () => {
   test('lexes keywords', () => {
     const tests: LexerTestCase[] = [
       {
-        input: '@mixin foo($a, $b) {}',
+        input: `
+        @mixin
+        @return
+        @else
+        @if
+        @include
+        @function
+        `,
         expectedTokens: [
           [SyntaxType.MixinToken, '@mixin'],
-          [SyntaxType.NameToken, 'foo'],
-          [SyntaxType.LParenToken, '('],
-          [SyntaxType.IdentToken, '$a'],
-          [SyntaxType.CommaToken, ','],
-          [SyntaxType.IdentToken, '$b'],
-          [SyntaxType.RParenToken, ')'],
-          [SyntaxType.LBraceToken, '{'],
-          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.ReturnToken, '@return'],
+          [SyntaxType.ElseToken, '@else'],
+          [SyntaxType.IfToken, '@if'],
+          [SyntaxType.IncludeToken, '@include'],
+          [SyntaxType.FunctionToken, '@function'],
           [SyntaxType.EOF, '']
         ]
       }
@@ -279,6 +283,46 @@ describe('lexer', () => {
           [SyntaxType.NameToken, 'b'],
           [SyntaxType.RParenToken, ')'],
           [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.RBraceToken, '}'],
+          [SyntaxType.EOF, '']
+        ]
+      }
+    ]
+
+    runLexerTests(tests)
+  })
+
+  test('lexes function', () => {
+    const tests: LexerTestCase[] = [
+      {
+        input: `
+            @function test() {}
+
+            @function test($a, $b) {
+              @return 1 + $a;
+            }
+            `,
+        expectedTokens: [
+          [SyntaxType.FunctionToken, '@function'],
+          [SyntaxType.NameToken, 'test'],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.RBraceToken, '}'],
+
+          [SyntaxType.FunctionToken, '@function'],
+          [SyntaxType.NameToken, 'test'],
+          [SyntaxType.LParenToken, '('],
+          [SyntaxType.IdentToken, '$a'],
+          [SyntaxType.CommaToken, ','],
+          [SyntaxType.IdentToken, '$b'],
+          [SyntaxType.RParenToken, ')'],
+          [SyntaxType.LBraceToken, '{'],
+          [SyntaxType.ReturnToken, '@return'],
+          [SyntaxType.ValueToken, '1'],
+          [SyntaxType.PlusToken, '+'],
+          [SyntaxType.IdentToken, '$a'],
+          [SyntaxType.SemicolonToken, ';'],
           [SyntaxType.RBraceToken, '}'],
           [SyntaxType.EOF, '']
         ]

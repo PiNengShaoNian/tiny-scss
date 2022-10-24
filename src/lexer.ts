@@ -41,6 +41,10 @@ export const lexer = (input: string): Token[] => {
         return SyntaxType.IfToken
       case 'else':
         return SyntaxType.ElseToken
+      case 'function':
+        return SyntaxType.FunctionToken
+      case 'return':
+        return SyntaxType.ReturnToken
       default:
         return null
     }

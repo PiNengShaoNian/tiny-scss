@@ -22,6 +22,8 @@ export enum SyntaxType {
   IncludeToken = 'IncludeToken',
   IfToken = 'IfToken',
   ElseToken = 'ElseToken',
+  FunctionToken = 'FunctionToken',
+  ReturnToken = 'ReturnToken',
   EOF = 'EOF',
 
   // Nodes
