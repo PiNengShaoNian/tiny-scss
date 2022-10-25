@@ -1,5 +1,5 @@
 import { lexer, Token } from './lexer'
-import { BinaryExpression, parser, Rule } from './parser'
+import { BinaryExpression, CallExpression, parser, Rule } from './parser'
 import { SyntaxType } from './SyntaxType'
 
 describe('parser', () => {
@@ -212,6 +212,64 @@ describe('parser', () => {
             }
           ]
         }
+      },
+      {
+        input: `
+        $a: test(1) % a + test(3, 4) - $b;
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Declaration,
+              name: '$a',
+              expression: {
+                type: SyntaxType.BinaryExpression,
+                left: {
+                  type: SyntaxType.BinaryExpression,
+                  left: {
+                    type: SyntaxType.BinaryExpression,
+                    left: new CallExpression('test', [
+                      new Token(SyntaxType.ValueToken, '1')
+                    ]),
+                    operator: new Token(SyntaxType.ModToken, '%'),
+                    right: new Token(SyntaxType.NameToken, 'a')
+                  },
+                  operator: new Token(SyntaxType.PlusToken, '+'),
+                  right: new CallExpression('test', [
+                    new Token(SyntaxType.ValueToken, '3'),
+                    new Token(SyntaxType.ValueToken, '4')
+                  ])
+                },
+                operator: new Token(SyntaxType.MinusToken, '-'),
+                right: new Token(SyntaxType.IdentToken, '$b')
+              }
+            }
+          ]
+        }
+      },
+      {
+        input: `
+        $a: test(add(add(1, 2), 3));
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Declaration,
+              name: '$a',
+              expression: new CallExpression('test', [
+                new CallExpression('add', [
+                  new CallExpression('add', [
+                    new Token(SyntaxType.ValueToken, '1'),
+                    new Token(SyntaxType.ValueToken, '2')
+                  ]),
+                  new Token(SyntaxType.ValueToken, '3')
+                ])
+              ])
+            }
+          ]
+        }
       }
     ]
 
@@ -361,6 +419,54 @@ describe('parser', () => {
                   type: SyntaxType.Rule,
                   name: 'height',
                   expression: new Token(SyntaxType.ValueToken, '3px')
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+
+    runParserTests(tests)
+  })
+
+  test('parse function', () => {
+    const tests: ParserTestCase[] = [
+      {
+        input: `
+            @function test1() {}
+
+            @function test2($a, $b) {
+              @return $a + $b / 1;
+            }
+            `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Function,
+              name: 'test1',
+              parameters: [],
+              body: []
+            },
+            {
+              type: SyntaxType.Function,
+              name: 'test2',
+              parameters: ['$a', '$b'],
+              body: [
+                {
+                  type: SyntaxType.Return,
+                  expression: {
+                    type: SyntaxType.BinaryExpression,
+                    left: new Token(SyntaxType.IdentToken, '$a'),
+                    operator: new Token(SyntaxType.PlusToken, '+'),
+                    right: {
+                      type: SyntaxType.BinaryExpression,
+                      left: new Token(SyntaxType.IdentToken, '$b'),
+                      operator: new Token(SyntaxType.DivToken, '/'),
+                      right: new Token(SyntaxType.ValueToken, '1')
+                    }
+                  }
                 }
               ]
             }

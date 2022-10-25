@@ -1,9 +1,20 @@
 import { Token } from './lexer'
 import { SyntaxType } from './SyntaxType'
 
-export type SCSSChild = Block | Declaration | Mixin | Include | IfClause
+export type SCSSChild =
+  | Block
+  | Declaration
+  | Mixin
+  | Include
+  | IfClause<BlockChild>
+  | Function
 export type BlockChild = SCSSChild | Rule
-export type Expression = Token | BinaryExpression
+export type FunctionChild =
+  | Function
+  | IfClause<FunctionChild>
+  | Declaration
+  | Return
+export type Expression = Token | BinaryExpression | CallExpression
 export class SCSS {
   readonly type = SyntaxType.SCSS
   constructor(public content: SCSSChild[]) {}
@@ -47,16 +58,37 @@ export class Include {
   constructor(public name: string, public args: Expression[]) {}
 }
 
-export class Branch {
-  constructor(public condition: Expression, public body: BlockChild[]) {}
+export class Branch<ChildType extends FunctionChild | BlockChild = BlockChild> {
+  constructor(public condition: Expression, public body: ChildType[]) {}
 }
 
-export class IfClause {
+export class IfClause<
+  ChildType extends FunctionChild | BlockChild = BlockChild
+> {
   readonly type = SyntaxType.IfClause
   constructor(
-    public branches: Branch[],
-    public alternative: BlockChild[] | null
+    public branches: Array<Branch<ChildType>>,
+    public alternative: ChildType[] | null
   ) {}
+}
+
+export class Function {
+  readonly type = SyntaxType.Function
+  constructor(
+    public name: string,
+    public parameters: string[],
+    public body: FunctionChild[]
+  ) {}
+}
+
+export class Return {
+  readonly type = SyntaxType.Return
+  constructor(public expression: Expression) {}
+}
+
+export class CallExpression {
+  readonly type = SyntaxType.CallExpression
+  constructor(public name: string, public args: Expression[]) {}
 }
 
 export const parser = (tokens: Token[]): SCSS => {
@@ -117,20 +149,83 @@ export const parser = (tokens: Token[]): SCSS => {
       case SyntaxType.IncludeToken:
         return parseInclude()
       case SyntaxType.IfToken:
-        return parseIfClause()
+        return parseIfClause('block')
+      case SyntaxType.FunctionToken:
+        return parseFunction()
       default:
         return parseBlock()
     }
   }
 
-  const parseIfClause = (): IfClause => {
+  const parseReturn = (): Return => {
+    matchToken(SyntaxType.ReturnToken)
+    const expression = parseExpression()
+    matchToken(SyntaxType.SemicolonToken)
+
+    return new Return(expression)
+  }
+
+  const parseFunctionBody = (): FunctionChild[] => {
+    const body: FunctionChild[] = []
+    while (tokens[idx].type !== SyntaxType.RBraceToken) {
+      switch (tokens[idx].type) {
+        case SyntaxType.FunctionToken:
+          body.push(parseFunction())
+          break
+        case SyntaxType.IfToken:
+          body.push(parseIfClause('function'))
+          break
+        case SyntaxType.IdentToken:
+          body.push(parseDeclaration())
+          break
+        case SyntaxType.ReturnToken:
+          body.push(parseReturn())
+          break
+        default:
+          throw new Error(
+            `ParseFunctionBody: unexpected NodeType '${tokens[idx].type}'`
+          )
+      }
+    }
+
+    return body
+  }
+
+  const parseFunction = (): Function => {
+    matchToken(SyntaxType.FunctionToken)
+    const nameToken = matchToken(SyntaxType.NameToken)
+    matchToken(SyntaxType.LParenToken)
+    const parameters = parseParameters()
+    matchToken(SyntaxType.RParenToken)
+    matchToken(SyntaxType.LBraceToken)
+    const body = parseFunctionBody()
+    matchToken(SyntaxType.RBraceToken)
+    return new Function(nameToken.literal, parameters, body)
+  }
+
+  const parseIfClause = <Context extends 'function' | 'block'>(
+    context: Context
+  ): IfClause<
+    Context extends 'block'
+      ? BlockChild
+      : Context extends 'function'
+        ? FunctionChild
+        : never
+    > => {
+    type ChildType = Context extends 'block'
+      ? BlockChild
+      : Context extends 'function'
+        ? FunctionChild
+        : never
     matchToken(SyntaxType.IfToken)
+    const bodyParseFunc =
+      context === 'block' ? parseBlockBody : parseFunctionBody
     const ifCondition = parseExpression()
     matchToken(SyntaxType.LBraceToken)
-    const ifBody = parseBlockBody()
+    const ifBody = bodyParseFunc() as ChildType[]
     matchToken(SyntaxType.RBraceToken)
-    const branches: Branch[] = []
-    branches.push(new Branch(ifCondition, ifBody))
+    const branches: Array<Branch<ChildType>> = []
+    branches.push(new Branch<ChildType>(ifCondition, ifBody))
 
     while (
       tokens[idx].type === SyntaxType.ElseToken &&
@@ -141,20 +236,20 @@ export const parser = (tokens: Token[]): SCSS => {
       matchToken(SyntaxType.NameToken)
       const elseIfCondition = parseExpression()
       matchToken(SyntaxType.LBraceToken)
-      const elseIfBody = parseBlockBody()
+      const elseIfBody = bodyParseFunc() as ChildType[]
       matchToken(SyntaxType.RBraceToken)
-      branches.push(new Branch(elseIfCondition, elseIfBody))
+      branches.push(new Branch<ChildType>(elseIfCondition, elseIfBody))
     }
 
-    let alternative: null | BlockChild[] = null
+    let alternative: null | ChildType[] = null
     if (tokens[idx].type === SyntaxType.ElseToken) {
       matchToken(SyntaxType.ElseToken)
       matchToken(SyntaxType.LBraceToken)
-      alternative = parseBlockBody()
+      alternative = bodyParseFunc() as ChildType[]
       matchToken(SyntaxType.RBraceToken)
     }
 
-    return new IfClause(branches, alternative)
+    return new IfClause<ChildType>(branches as any[], alternative)
   }
 
   const parseArguments = (): Expression[] => {
@@ -209,11 +304,30 @@ export const parser = (tokens: Token[]): SCSS => {
     return new Mixin(mixinNameToken.literal, parameters, body)
   }
 
+  const parseCallExpression = (): CallExpression => {
+    let nameToken: Token
+    if (tokens[idx].type === SyntaxType.NameToken) {
+      nameToken = matchToken(SyntaxType.NameToken)
+    } else {
+      nameToken = matchToken(SyntaxType.IdentToken)
+    }
+    matchToken(SyntaxType.LParenToken)
+    const args = parseArguments()
+    matchToken(SyntaxType.RParenToken)
+
+    return new CallExpression(nameToken.literal, args)
+  }
+
   const parsePrimaryExpression = (): Expression => {
     const token = tokens[idx]
     switch (token.type) {
       case SyntaxType.IdentToken:
       case SyntaxType.NameToken:
+        if (tokens[idx + 1].type === SyntaxType.LParenToken) {
+          return parseCallExpression()
+        }
+        ++idx
+        return token
       case SyntaxType.ValueToken:
         ++idx
         return token
