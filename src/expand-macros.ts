@@ -10,16 +10,27 @@ import {
   SCSSChild,
   Mixin,
   Include,
-  IfClause
+  IfClause,
+  Function,
+  CallExpression,
+  FunctionChild
 } from './parser'
 import { SyntaxType } from './SyntaxType'
 
-type SCSSObject = StringObject | NumberObject | BooleanObject | MixinObject
+type SCSSObject =
+  | StringObject
+  | NumberObject
+  | BooleanObject
+  | MixinObject
+  | FunctionObject
+  | ReturnObject
 enum SCSSObjectType {
   String = 'String',
   Number = 'Number',
   Boolean = 'Boolean',
-  Mixin = 'Mixin'
+  Mixin = 'Mixin',
+  Function = 'Function',
+  Return = 'Return'
 }
 class StringObject {
   readonly type = SCSSObjectType.String
@@ -39,6 +50,14 @@ class BooleanObject {
 class MixinObject {
   readonly type = SCSSObjectType.Mixin
   constructor(public value: Mixin, public scope: Scope) {}
+}
+class FunctionObject {
+  readonly type = SCSSObjectType.Function
+  constructor(public value: Function, public scope: Scope) {}
+}
+class ReturnObject {
+  readonly type = SCSSObjectType.Return
+  constructor(public value: FunctionObject | StringObject | NumberObject) {}
 }
 
 class Scope {
@@ -66,7 +85,7 @@ class Scope {
 
 export const expandMacros = (scss: SCSS): SCSS => {
   const extendScope = (
-    obj: MixinObject,
+    obj: MixinObject | FunctionObject,
     execScope: Scope,
     args: Expression[]
   ): Scope => {
@@ -90,12 +109,12 @@ export const expandMacros = (scss: SCSS): SCSS => {
     return extendedScope
   }
 
-  const findTargetBranch = (
-    ifClause: IfClause,
+  const findTargetBranch = <ChildType extends FunctionChild | BlockChild>(
+    ifClause: IfClause<ChildType>,
     scope: Scope
-  ): BlockChild[] | null => {
+  ): ChildType[] | null => {
     const branches = ifClause.branches
-    let targetBranch: BlockChild[] | null = null
+    let targetBranch: ChildType[] | null = null
     for (const branch of branches) {
       const condition = evalExpression(branch.condition, scope)
 
@@ -213,15 +232,92 @@ export const expandMacros = (scss: SCSS): SCSS => {
         }
         return obj
       }
-      case SyntaxType.NameToken:
+      case SyntaxType.NameToken: {
+        const funcObj = scope.lookup(expr.literal)
+        if (funcObj?.type === SCSSObjectType.Function) return funcObj
         return new StringObject(expr.literal)
+      }
       case SyntaxType.ValueToken:
         return evalValueToken(expr)
       case SyntaxType.BinaryExpression:
         return evalBinaryExpression(expr as BinaryExpression, scope)
+      case SyntaxType.CallExpression:
+        return evalCallExpression(expr as CallExpression, scope)
       default:
         throw new Error(`EvalExpression: unexpected NodeType '${expr.type}'`)
     }
+  }
+
+  const evalIfClause = (
+    ifClause: IfClause<FunctionChild>,
+    scope: Scope
+  ): SCSSObject | null => {
+    const targetBranch = findTargetBranch(ifClause, scope)
+
+    if (targetBranch === null) return null
+
+    return evalFunctionBody(targetBranch, scope)
+  }
+
+  const evalFunctionBody = (
+    body: FunctionChild[],
+    scope: Scope
+  ): SCSSObject | null => {
+    for (const node of body) {
+      switch (node.type) {
+        case SyntaxType.Return: {
+          const result = evalExpression(node.expression, scope)
+          if (
+            result.type !== SCSSObjectType.String &&
+            result.type !== SCSSObjectType.Number &&
+            result.type !== SCSSObjectType.Function
+          ) {
+            throw new Error(
+              `EvalFunctionBody: unexpected return type '${result.type}'`
+            )
+          }
+          return new ReturnObject(result)
+        }
+        case SyntaxType.Function:
+          scope.addSymbol(node.name, new FunctionObject(node, scope))
+          break
+        case SyntaxType.Declaration:
+          scope.addSymbol(node.name, evalExpression(node.expression, scope))
+          break
+        case SyntaxType.IfClause: {
+          const result = evalIfClause(node, scope)
+          if (result?.type === SCSSObjectType.Return) {
+            return result
+          }
+        }
+      }
+    }
+
+    return null
+  }
+
+  const evalCallExpression = (ce: CallExpression, scope: Scope): SCSSObject => {
+    const funcObj = scope.lookup(ce.name)
+    if (funcObj === null) {
+      throw new Error(
+        `EvalCallExpression: function '${ce.name}' is not defined`
+      )
+    }
+
+    if (funcObj.type !== SCSSObjectType.Function) {
+      throw new Error(
+        `EvalCallExpression: calling non-function ${JSON.stringify(funcObj)}`
+      )
+    }
+
+    const extendedScope = extendScope(funcObj, scope, ce.args)
+
+    const result = evalFunctionBody(funcObj.value.body, extendedScope)
+    if (result === null) {
+      throw new Error('EvalCallExpression: expect a return value')
+    }
+    if (result.type === SCSSObjectType.Return) return result.value
+    else return result
   }
 
   const expandSCSS = (scss: SCSS, scope: Scope): SCSS => {
@@ -261,11 +357,19 @@ export const expandMacros = (scss: SCSS): SCSS => {
         return expandInclude(node, scope) as SCSSChild[]
       case SyntaxType.IfClause:
         return expandIfClause(node, scope) as SCSSChild[]
+      case SyntaxType.Function:
+        return expandFunction(node, scope)
       default:
         throw new Error(
           `ExpandSCSSChild: unexpected NodeType '${(node as SCSSChild).type}'`
         )
     }
+  }
+
+  const expandFunction = (func: Function, scope: Scope): null => {
+    const funcObj = new FunctionObject(func, scope)
+    scope.addSymbol(func.name, funcObj)
+    return null
   }
 
   const expandIfClause = (ifClause: IfClause, scope: Scope): BlockChild[] => {

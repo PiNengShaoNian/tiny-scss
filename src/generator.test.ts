@@ -159,4 +159,65 @@ describe('generator', () => {
 
     runGeneratorTests(tests)
   })
+
+  test('generate function and call expression', () => {
+    const tests: GeneratorTestCase[] = [
+      {
+        input: `
+        @function pow($n, $e) {
+          @if($e == 1) {
+            @return $n;
+          } @else if($e % 2 == 1) {
+            @return $n * pow($n, $e - 1);
+          } @else {
+            $half: pow($n, $e / 2);
+            @return $half * $half;
+          }
+        }
+
+        @function sum($n) {
+          @if($n == 0) {
+            @return 0;
+          } @else {
+            @return pow($n, 2) + sum($n - 1);
+          }
+        }
+
+        @mixin box() {
+          width: 100px;
+
+          $a: pow(2, 10) + 0px;
+          .box {
+            height: $a;
+          }
+
+          .line {
+            $a: pow(2, 10) / 2 + 0px;
+            height: $a;
+          }
+        }
+
+        .container {
+          height: sum(3) + 0px;
+
+          @include box();
+        }
+        `,
+        expected: `
+        .container {
+          height: 14px;
+          width: 100px;
+        }
+        .container .box {
+          height: 1024px;
+        }
+        .container .line {
+          height: 512px;
+        }
+        `
+      }
+    ]
+
+    runGeneratorTests(tests)
+  })
 })

@@ -244,4 +244,134 @@ describe('expand-macros', () => {
 
     runExpandMacrosTests(tests)
   })
+
+  test('expand function', () => {
+    const tests: ExpandMacrosTestCase[] = [
+      {
+        input: `
+            @function pow($n, $e) {
+              @if($e == 1) {
+                @return $n;
+              } @else if($e % 2 == 1) {
+                @return $n * pow($n, $e - 1);
+              } @else {
+                $half: pow($n, $e / 2);
+                @return $half * $half;
+              }
+            }
+
+            $a: pow(2, 10);
+            .container {
+              height: $a + 0px;
+            }
+            `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                new Rule('height', new Token(SyntaxType.ValueToken, '1024px'))
+              ]
+            }
+          ]
+        }
+      },
+      {
+        input: `
+            @function fib($n) {
+              @if($n == 1) {
+                @return 1;
+              } @else if($n == 0) {
+                @return 0;
+              } @else {
+                @return fib($n - 1) + fib($n - 2);
+              }
+            }
+
+            $a: fib(15);
+            .container {
+              height: $a + 0px;
+            }
+            `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                new Rule('height', new Token(SyntaxType.ValueToken, '610px'))
+              ]
+            }
+          ]
+        }
+      },
+      {
+        input: `
+        @function createAdd($base) {
+          @function add($a) {
+            @return $a + $base;
+          }
+
+          @return add;
+        }
+
+        $add: createAdd(10);
+
+        .container {
+          height: $add(1) + $add(2) + 0px;
+        }
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                new Rule('height', new Token(SyntaxType.ValueToken, '23px'))
+              ]
+            }
+          ]
+        }
+      },
+      {
+        input: `
+        @function outer($n) {
+          @function inner() {
+            @return outer(10);
+          }
+
+          @if $n == 10 {
+            @return 10;
+          } @else {
+            @return inner;
+          }
+        }
+
+        $inner: outer(0);
+
+        .container {
+          height: $inner() + outer(10) * 1px;
+        }
+        `,
+        expectedAST: {
+          type: SyntaxType.SCSS,
+          content: [
+            {
+              type: SyntaxType.Block,
+              selector: '.container',
+              body: [
+                new Rule('height', new Token(SyntaxType.ValueToken, '20px'))
+              ]
+            }
+          ]
+        }
+      }
+    ]
+
+    runExpandMacrosTests(tests)
+  })
 })
